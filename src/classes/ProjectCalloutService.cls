@@ -6,20 +6,22 @@ public class ProjectCalloutService {
                 SELECT Id,Name,Account.Name,CloseDate,Amount
                 FROM Opportunity
                 WHERE Id = :oppIds[0]
+                LIMIT 1
         ];
+
         String serviceToken = ServiceTokens__c.getValues('ProjectServiceToken').Token__c;
-        String jsonInput = '{\n' +
-                ' "opportunityId" : "' + opp.Id + '",\n' +
-                ' "opportunityName" : "' + opp.Name + '",\n' +
-                ' "accountName" : "' + opp.Account.Name + '",\n' +
-                ' "closeDate" : "' + String.valueOf(opp.CloseDate).mid(0, 10) + '",\n' +
-                ' "amount" : "' + opp.Amount + '"\n}';
+        String jsonInput = '{' +
+                ' "opportunityId" : "' + opp.Id +
+                ' "opportunityName" : "' + opp.Name +
+                ' "accountName" : "' + opp.Account.Name +
+                ' "closeDate" : "' + String.valueOf(opp.CloseDate).mid(0, 10) +
+                ' "amount" : "' + opp.Amount + '}';
 
         System.enqueueJob(new QueueablePMSCall(serviceToken, jsonInput, opp.Id));
     }
 
     @Future(Callout=true)
-    public static void postToPMS(String serviceToken, String jsonInput, Id oppoId) {
+    public static void postToPMS(String serviceToken, String jsonInput, Id oppId) {
         HttpRequest req = new HttpRequest();
         req.setEndpoint('callout:ProjectService');
         req.setMethod('POST');
@@ -30,7 +32,7 @@ public class ProjectCalloutService {
         Http http = new Http();
         HttpResponse res = http.send(req);
 
-        Opportunity opp = new Opportunity(Id = oppoId);
+        Opportunity opp = new Opportunity(Id = oppId);
         if (res.getStatusCode() == 201) {
             opp.StageName = 'Submitted Project';
             System.debug('Success: ' + res.getStatus());
@@ -39,5 +41,21 @@ public class ProjectCalloutService {
             System.debug('Failure: ' + res.getStatusCode() + ' ' + res.getStatus());
         }
         update opp;
+    }
+
+    class QueueablePMSCall implements System.Queueable, Database.AllowsCallouts{
+        private String serviceToken;
+        private String jsonInput;
+        private Id oppId;
+
+        public QueueablePMSCall(String serviceToken, String jsonInput, Id oppId){
+            this.serviceToken = serviceToken;
+            this.jsonInput = jsonInput;
+            this.oppId = oppId;
+        }
+
+        public void execute(QueueableContext qc){
+            postToPMS(serviceToken, jsonInput, oppId);
+        }
     }
 }
