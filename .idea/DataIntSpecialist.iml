@@ -45,6 +45,10 @@
                             <option name="selected" value="true" />
                           </MetadataEntry>
                           <MetadataEntry>
+                            <option name="name" value="BillingServiceProxy" />
+                            <option name="selected" value="true" />
+                          </MetadataEntry>
+                          <MetadataEntry>
                             <option name="name" value="InstallationTests" />
                             <option name="selected" value="true" />
                           </MetadataEntry>
